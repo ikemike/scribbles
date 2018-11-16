@@ -1,62 +1,114 @@
 "use strict"; 
 require('chromedriver');
 var webdriver = require("selenium-webdriver");
-let e = 'Great@Job.com';
+
+// Configuration 
+let e = 'bomiwemara@daabox.com';
+let firstname = 'Poopy';
+let lastname = 'Face';
+
+let sites = [
+    'https://www.scientificamerican.com/page/newsletter-sign-up/'
+    , 'https://www.sciencemag.org/subscribe/get-our-newsletters'
+    , 'https://www.eurekalert.org/newsletter/'
+    , 'https://www.nays.org/resources/more/free-e-newsletters/'
+];
 
 // XPATH EMAIL SELECTOR
 let emailInputXPath = "//input[contains(translate(@name, 'EMAIL', 'email'),'email')]";
 
 // XPATH FIRST NAME SELECTOR
-let fnInputXP = "//input[contains(translate(@name, 'FIRSTNAME', 'firstname'),'firstname')]";
-let fnInputXP2 = "//input[contains(translate(@name, 'FNAME', 'fname'),'fname')]";
+let fnInputXP = "//input[contains(translate(@name, 'FIRSTNAME', 'firstname'),'firstname')"
+                  +" or (contains(translate(@name, 'FNAME', 'fname'),'fname'))]";
 
 // XPATH LAST NAME SELECTOR
-let lnInputXP = "//input[contains(translate(@name, 'LASTNME', 'lastnme'),'lastname')]";
-let lnInputXP2 = "//input[contains(translate(@name, 'LNAME', 'lname'),'lname')]";
+let lnInputXP = "//input[contains(translate(@name, 'LASTNME', 'lastnme'),'lastname')"
+                    +" or (contains(translate(@name, 'LNAME', 'lname'),'lname'))]";
 
 // XPATH CHECKBOX SELECTOR
-let cboxInputXP = '//input[@type="checkbox" and not (@checked)]';
+let cboxInputXP = "//input[@type='checkbox' and not (@checked)]";
 
 // XPATH SELECT LIST SELECTOR
-let countryInputXP = "//select[contains(translate(@name, 'COUNTRY', 'country'),'country')]";
-let countryInputXP2 = "//select[contains(@class, 'required')]";
+let countryInputSelectXP = "//select[contains(translate(@name, 'COUNTRY', 'country'),'country')]";
+let countryInputOptionXP = `//option[
+        @value='US' 
+        or (contains(translate(@value, 'UNITED', 'united'), 'united')) 
+    ]`;
 
+// XPATH SUBMIT BUTTON SELECTOR
+let submitXP = `//*[
+        @type='submit' and 
+        (
+            (contains(translate(@value, 'SUBCRIE', 'subcrie'), 'subscribe')) 
+            or (contains(translate(@name, 'SUBCRIE', 'subcrie'), 'subscribe'))
+            or (contains(translate(text(), 'SUBCRIE', 'subcrie'), 'subscribe'))
+            or (contains(translate(text(), 'SIGN', 'sign'), 'sign'))
+            or (contains(translate(@id, 'SIGN', 'sign'), 'sign'))
+        )
+    ]`;
 
 
 let driver = new webdriver.Builder().usingServer().withCapabilities({'browserName': 'chrome' }).build();
 //let site = 'https://www.scientificamerican.com/page/newsletter-sign-up/';
 //let site = 'https://www.sciencemag.org/subscribe/get-our-newsletters';
-let site = 'https://www.eurekalert.org/newsletter/';
+//let site = 'https://www.eurekalert.org/newsletter/';
+//let site = 'https://www.sciencenewsforstudents.org/newsletter';
+//let site = 'https://www.nays.org/resources/more/free-e-newsletters/';
 
 
-driver.get(site);
-doStuff(emailInputXPath, 'sendKeys', e);
-doStuff(fnInputXP, 'sendKeys', 'First Name');
-doStuff(fnInputXP2, 'sendKeys', 'First Name');
+sites.forEach(site => {
 
-doStuff(lnInputXP, 'sendKeys', 'Last Name');
-doStuff(lnInputXP2, 'sendKeys', 'Last Name');
+driver.get(site).then(x => {
 
-doStuff(cboxInputXP, 'click', '');
+    driver.sleep(550).then(y => {
+        
+        Promise.all([
+            setElement(emailInputXPath, 'sendKeys', e)
+            ,setElement(fnInputXP, 'sendKeys', firstname)
+            ,setElement(lnInputXP, 'sendKeys', lastname)
+            ,setElement(cboxInputXP, 'click', '')
+            ,setElement(countryInputSelectXP, 'select', "United States")
+            ,setElement(countryInputOptionXP, 'selectOption', null)
+            , driver.sleep(2000)
+        ]).then(y => {
+            setElement(submitXP, 'submit', '').then(driver.sleep(2000));
+        }).catch(err => {
+            console.log('There was an error in one of the promises');
+        })
 
-doStuff(countryInputXP, 'select', 'United States of America');
-doStuff(countryInputXP2, 'select', 'United States of America');
+    })
+
+})
+
+})
+
+
 
 
 // Get applicable email elements and send keys 
-function doStuff(xPathSelector, actionToPerform, keys) {
-    driver.findElements(webdriver.By.xpath(xPathSelector)).then(elements => {
+function setElement(xPathSelector, actionToPerform, keys) {
+    return driver.findElements(webdriver.By.xpath(xPathSelector)).then(elements => {
         console.log('Found: ' + elements.length + ' matching elements (' + actionToPerform + ')');
         elements.forEach(anElement => {
             Promise.all([anElement.isDisplayed(), anElement.isEnabled()]).then(results => {
                 if (results[0] && results[1]) {
                     if (actionToPerform == 'sendKeys') anElement.sendKeys(keys);
                     else if (actionToPerform == 'click') console.log('clicking'), anElement.click();
-                    else if (actionToPerform == 'select') console.log('selecting'), anElement.selectByVisibleText(keys);
+                    else if (actionToPerform == 'select') console.log('selecting'), anElement.setSelectListValue(keys); // <option value="us"></option>
+                    else if (actionToPerform == 'selectOption') console.log('selecting option'), anElement.click();
+                    else if (actionToPerform == 'submit') console.log('submitting'), anElement.click();
                 } 
             }).catch(err => {});
         });
     });
+}
+
+function setSelectListValue(xPathSelector) {
+    driver.findElements(webdriver.By.xpath(xPathSelector)).then(elements => {
+        elements.forEach(anElement => {
+            anElement.click();
+        })
+    })
 }
 
 
