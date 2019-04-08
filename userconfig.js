@@ -1,8 +1,8 @@
 module.exports = {
-    firstname: "firstname",
-    lastname: "lastname",
-    email: "fl@null.com",
-    phone: "1",
+    firstname: "Jarold",
+    lastname: "Lemon",
+    email: "testinbox@verifymail.win",
+    phone: "16081231234",
     dob: "",
     street: "",
     city: "",

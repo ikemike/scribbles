@@ -26,7 +26,7 @@ module.exports.parseElement = async function (e) {
     parsedElement.elementInnerText = parsedElement.elementInnerText != null ? parsedElement.elementInnerText.toLowerCase() : '';
 
     parsedElement.getType();
-    //parsedElement.describe();
+    if (this.typeOfElement != null) parsedElement.describe();
     return parsedElement;
 };
 
@@ -37,6 +37,8 @@ class ParsedElement {
         //console.log(this.elementOuterHtml);
         
         console.log(`\
+
+            ::${this.typeOfElement}::
             ${this.elementHtmlTag} Type: ${this.elementType} Id: ${this.elementId}\
             ${(this.elementName != '' ? 'Name:' + this.elementName : '')}\
             ${(this.elementValue != '' ? 'Value:' + this.elementValue : '')}\
@@ -51,13 +53,14 @@ class ParsedElement {
         //let emailTexts = ['email','e-mail'];
         //let elementContainsWordEmail = emailTexts.some(txt => this.elementPlaceholder.includes(txt));
 
-        let elementTakesInput = this.elementHtmlTag == 'input' || this.elementHtmlTag == 'button' || this.elementHtmlTag == 'select' ;      
+        let elementTakesInput = this.elementHtmlTag == 'input' || this.elementHtmlTag == 'button' || this.elementHtmlTag == 'select';      
         let elementAcceptsText = this.elementType == 'text' || this.elementType == 'email';
         let checkboxElement = this.elementType == 'checkbox';
         let emailElement = this.elementPlaceholder.includes('email') || this.elementId.includes('email') || this.elementName.includes('email');              
         let nameElement = this.elementPlaceholder.includes('name') || this.elementId.includes('name') || this.elementName.includes('name'); 
         let selectElement = this.elementHtmlTag == 'select';
-        let submitButtonElement = this.elementId.includes('subscribe') || this.elementName.includes('subscribe') || this.elementOuterHtml.includes('signup');
+        let submitButtonElement = (this.elementId.includes('subscribe') || this.elementName.includes('subscribe') || this.elementInnerText.includes('sign'))
+            && !this.elementOuterHtml.includes('unsubscribe')
         
         if (elementTakesInput) {
             
@@ -71,7 +74,7 @@ class ParsedElement {
                 this.typeOfElement = 'CHECKBOX INPUT';
             } else if (selectElement) {
                 this.typeOfElement = 'SELECT INPUT';
-            }
+            } 
             
         }
     
