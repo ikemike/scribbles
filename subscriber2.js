@@ -4,28 +4,8 @@ const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const uconfig = require('./userconfig.js');
 const elementParser = require('./elementParser.js');
+const googler = require('./googler2.js');
 var driver;
-
-
-async function goToWebsite() {
-    await driver.get('https://www.eurekalert.org/newsletter/');
-}
- 
-async function parsePageElements() {
-    let parsedElements = [];
-    let elements = await driver.findElements(By.css('input'));
-    let buttons = await driver.findElements(By.css('button'));
-    let selects = await driver.findElements(By.css('select'));
-
-    elements = elements.concat(buttons);
-    console.log('Total elements found: ' + elements.length);
-
-    for (var i = 0; i < elements.length; i++) {
-        let parsedElement = await elementParser.parseElement(elements[i]);
-        parsedElements.push(parsedElement);
-    }
-    return parsedElements;
-}
 
 
 
@@ -38,28 +18,51 @@ async function init() {
         //.setChromeOptions(new chrome.Options().headless().windowSize({width: 640, height: 480}))
         .build();
         
-    await goToWebsite();
-
-    let parsedPageElements = await parsePageElements();
-
-    let submitButton = await setElements(parsedPageElements);
-    console.log('done setting elements!');
     
-    if (submitButton != undefined) submitButton.click();
+    let pagesToVisit = await googler.getGoogleResults(driver, By, Key, 'Java Newsletter');
+    console.log(pagesToVisit.length);
 
+    // Visit each google result
+    for (let i = 0; i < pagesToVisit.length; i++) {
 
-  
+        await driver.get(pagesToVisit[i]);
 
-    // Submit the form 
-    //if (submitElement != undefined) element.click();
+        let parsedPageElements = await parsePageElements();
+    
+        let submitButton = await setElements(parsedPageElements);
+        console.log('done setting elements!');
+    
+        if (submitButton != undefined) {
+            submitButton.click();
+        }
 
-    //await element.sendKeys('webdriver', Key.RETURN);
-    //await driver.wait(until.titleIs('webdriver - Google Search'), 1000);
-    //await driver.quit();
+        await driver.sleep(1000);
+
+    }
+    
 }
 
+// Return a list of elements that take input and pass them through the element parser class
+async function parsePageElements() {
+    let parsedElements = [];
+    let inputs = await driver.findElements(By.css('input'));
+    let buttons = await driver.findElements(By.css('button'));
+    let selects = await driver.findElements(By.css('select'));
+
+    let elements = [];
+    elements = elements.concat(inputs, buttons, selects);
+    console.log('Total elements found: ' + elements.length);
+
+    for (var i = 0; i < elements.length; i++) {
+        let parsedElement = await elementParser.parseElement(elements[i]);
+        parsedElements.push(parsedElement);
+    }
+    return parsedElements;
+}
+
+// Set each elements value based on what type of element it is - return a submit button 
 async function setElements(parsedPageElements) {
-    // Populate element content(s)
+
     let submitButton = undefined;
     for (let i = 0; i < parsedPageElements.length; i++) {
 
@@ -70,21 +73,34 @@ async function setElements(parsedPageElements) {
         
             if (inputType == 'EMAIL INPUT') {
                 if (await element.isDisplayed()) await element.sendKeys(uconfig.email); 
-                
                 //element.isDisplayed().then(isDisplayed => { if (isDisplayed) element.sendKeys(uconfig.email); });
+
             } else if (inputType == 'CHECKBOX INPUT') {
-                if (await element.isDisplayed()) await element.click(); 
-                //element.isDisplayed().then(isDisplayed => { if (isDisplayed) element.click(); });
+                if (await element.isDisplayed() && !(await element.getAttribute('checked'))) await element.click(); 
+
             } else if (inputType == 'NAME INPUT') {
                 if (await element.isDisplayed()) await element.sendKeys(uconfig.firstname); 
-                //element.isDisplayed().then(isDisplayed => { if (isDisplayed) element.sendKeys(uconfig.firstname); });
+
+            } else if (inputType == 'SELECT INPUT' && await element.isDisplayed()) {
+                // Select a dropdown option
+                await element.click(); 
+                await element.sendKeys(Key.ARROW_DOWN); 
+                await element.click(); 
+                
             } else if (inputType == 'SUBMIT INPUT') {
-                if (await element.isDisplayed() && await element.isEnabled()) submitButton = element; 
-                //element.isDisplayed().then(isDisplayed => { if (isDisplayed) element.click(); });
-            }
+                if (await element.isDisplayed()) submitButton = element; 
+
+            } 
+
+
         }
     }
     return submitButton;
+}
+
+// TODO: FIX 'element is not clickable at point... ' by arranging order of clicking/inputting
+async function setNameFields() {
+
 }
 
 
