@@ -14,6 +14,8 @@ module.exports.parseElement = async function (e) {
     parsedElement.elementHtmlTag = await e.getAttribute('tagName');
     parsedElement.elementName = await e.getAttribute('name');
     parsedElement.elementInnerText = await e.getText();
+    //parsedElement.parentElement = document.getElementById(this.elementId).parentElement.nodeName;
+    //console.log(parsedElement.parentElement);
 
     // Convert everything to lower case 
     parsedElement.elementValue = parsedElement.elementValue != null ? parsedElement.elementValue.toLowerCase() : '';
@@ -26,16 +28,13 @@ module.exports.parseElement = async function (e) {
     parsedElement.elementInnerText = parsedElement.elementInnerText != null ? parsedElement.elementInnerText.toLowerCase() : '';
 
     parsedElement.getType();
-    if (this.typeOfElement != null) parsedElement.describe();
+    //if (parsedElement.typeOfElement != undefined) parsedElement.describe();
     return parsedElement;
 };
 
 class ParsedElement {
 
     describe() {
-        // May want to redesign to analyze only outer html for starters
-        //console.log(this.elementOuterHtml);
-        
         console.log(`\
 
             ::${this.typeOfElement}::
@@ -53,14 +52,29 @@ class ParsedElement {
         //let emailTexts = ['email','e-mail'];
         //let elementContainsWordEmail = emailTexts.some(txt => this.elementPlaceholder.includes(txt));
 
-        let elementTakesInput = this.elementHtmlTag == 'input' || this.elementHtmlTag == 'button' || this.elementHtmlTag == 'select';      
+        let elementTakesInput = this.elementHtmlTag == 'input' || this.elementHtmlTag == 'button' || this.elementHtmlTag == 'select';    
+
         let elementAcceptsText = this.elementType == 'text' || this.elementType == 'email';
+
         let checkboxElement = this.elementType == 'checkbox';
-        let emailElement = this.elementPlaceholder.includes('email') || this.elementId.includes('email') || this.elementName.includes('email');              
-        let nameElement = this.elementPlaceholder.includes('name') || this.elementId.includes('name') || this.elementName.includes('name'); 
+
         let selectElement = this.elementHtmlTag == 'select';
-        let submitButtonElement = (this.elementId.includes('subscribe') || this.elementName.includes('subscribe') || this.elementInnerText.includes('sign'))
-            && !this.elementOuterHtml.includes('unsubscribe')
+
+        let emailElement = this.isGenericTypeOf('email');
+        let nameElement = this.isGenericTypeOf('name');
+        let firstNameElement = this.isGenericTypeOf('first');
+        let lastNameElement = this.isGenericTypeOf('last');
+        let phoneElement = this.isGenericTypeOf('phone');
+        let zipcodeElement = this.isGenericTypeOf('zip');
+        let streetElement = this.isGenericTypeOf('street') || this.isGenericTypeOf('address');
+        let companyElement = this.isGenericTypeOf('company');
+        let countryElement = selectElement && this.isGenericTypeOf('country');
+        let stateElement = selectElement && this.isGenericTypeOf('state')
+
+        let submitButtonElement = (this.isGenericTypeOf('subscribe') || this.isGenericTypeOf('sign') || this.isGenericTypeOf('join'))  
+            && !this.elementOuterHtml.includes('unsubscribe');
+
+        let genericSubmitButton = this.isGenericTypeOf('submit');
         
         if (elementTakesInput) {
             
@@ -68,16 +82,39 @@ class ParsedElement {
                 this.typeOfElement = 'EMAIL INPUT';
             } else if (nameElement && elementAcceptsText) {
                 this.typeOfElement = 'NAME INPUT';
-            } else if (submitButtonElement) {
-                this.typeOfElement = 'SUBMIT INPUT';
+            } else if (firstNameElement && elementAcceptsText) {
+                this.typeOfElement = 'FIRSTNAME INPUT';
+            } else if (lastNameElement && elementAcceptsText) {
+                this.typeOfElement = 'LASTNAME INPUT';
+            } else if (phoneElement) {
+                this.typeOfElement = 'PHONE INPUT';
+            } else if (zipcodeElement) {
+                this.typeOfElement = 'ZIPCODE INPUT';
+            } else if (streetElement) {
+                this.typeOfElement = 'STREET INPUT'
+            } else if (companyElement) {
+                this.typeOfElement = 'COMPANY INPUT'
             } else if (checkboxElement) {
                 this.typeOfElement = 'CHECKBOX INPUT';
-            } else if (selectElement) {
-                this.typeOfElement = 'SELECT INPUT';
-            } 
+            } else if (countryElement) {
+                this.typeOfElement = 'COUNTRY SELECT INPUT';
+            } else if (stateElement) {
+                this.typeOfElement = 'STATE SELECT INPUT';
+            } else if (selectElement && !countryElement && !stateElement) {
+                this.typeOfElement = 'GENERIC SELECT INPUT';
+            } else if (submitButtonElement) {
+                this.typeOfElement = 'SUBMIT INPUT';
+            } else if (genericSubmitButton) {
+                this.typeOfElement = 'GENERIC SUBMIT INPUT';
+            }
             
         }
     
+    }
+
+    // Returns true if: Placeholder, ElementId, ElementName include typeOf 
+    isGenericTypeOf(typeOf) {
+        return this.elementPlaceholder.includes(typeOf) || this.elementId.includes(typeOf) || this.elementName.includes(typeOf) || this.elementValue.includes(typeOf);
     }
 }
 

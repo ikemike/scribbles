@@ -4,9 +4,11 @@ module.exports = {
     email: "phfv0@email-host.info",
     phone: "16081231234",
     dob: "",
-    street: "",
-    city: "",
-    zip: "",
-    country: "USA",
+    street: "1010 Sunny D Lane",
+    city: "Sun Prarie",
+    zipcode: "53616",
+    country: "United States",
+    state: "Washington",
+    company: "Internet of Things",
     search_term: "loan newsletter"
 }

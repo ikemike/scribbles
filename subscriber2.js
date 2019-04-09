@@ -19,16 +19,10 @@ async function init() {
         .build();
         
     
-    let pagesToVisit = await googler.getGoogleResults(driver, By, Key, uconfig.search_term);
-    let pagesToVisit2 = await googler.getGoogleResults(driver, By, Key, 'farm newsletters');
-    let pagesToVisit3 = await googler.getGoogleResults(driver, By, Key, 'tech news');
-    let pagesToVisit4 = await googler.getGoogleResults(driver, By, Key, 'world news');
+    //let pagesToVisit = await googler.getGoogleResults(driver, By, Key, uconfig.search_term);
+    //await visitWebsites(pagesToVisit);
+    await visitWebsites(['https://nielsensports.com/newsletter-subscription/']);
 
-    await visitWebsites(pagesToVisit);
-    await visitWebsites(pagesToVisit2);
-    await visitWebsites(pagesToVisit3);
-    await visitWebsites(pagesToVisit4);
-    
 }
 
 async function visitWebsites(websitesToVisit) {
@@ -42,15 +36,15 @@ async function visitWebsites(websitesToVisit) {
             console.log('done setting elements!');
 
             if (submitButton != undefined) {
-                driver.executeScript("arguements[0].scrollIntoView(false)", submitButton);
+                driver.executeScript("arguments[0].scrollIntoView(false)", submitButton);
                 await driver.sleep(100);
                 await submitButton.click();
                 await driver.sleep(500);
-            }
-
+            } 
         } catch (e) {
             console.log(e);
         }
+        
     }
 }
 
@@ -68,6 +62,15 @@ async function parsePageElements() {
     for (var i = 0; i < elements.length; i++) {
         let parsedElement = await elementParser.parseElement(elements[i]);
         parsedElements.push(parsedElement);
+
+        // (TODO) Save the element's parent node to evaluate which form to process
+        let parentNode = await driver.executeScript('return arguments[0].parentNode', elements[i]);
+        let parentNodeName = await driver.executeScript('return arguments[0].nodeName', parentNode);
+        if (parentNodeName == 'FORM') {
+            let parentNodeId = await driver.executeScript('return arguments[0].name', parentNode);
+            let action = await driver.executeScript("return arguments[0].getAttribute('action')", parentNode);
+        }
+
     }
     return parsedElements;
 }
@@ -76,13 +79,63 @@ async function parsePageElements() {
 async function setElements(parsedPageElements) {
 
     let submitButton = undefined;
+    let genericSubmitButton = undefined;
     for (let i = 0; i < parsedPageElements.length; i++) {
 
         let inputType = parsedPageElements[i].typeOfElement;
         let element = parsedPageElements[i].element;
 
-        if (inputType != undefined) {
+        if (inputType != undefined && await element.isDisplayed()) {
+
+            switch(inputType) {
+                case 'EMAIL INPUT':
+                    await element.sendKeys(uconfig.email); 
+                    break;
+                case 'CHECKBOX INPUT' && !await element.getAttribute('checked'):
+                    await element.click();
+                    break;
+                case 'NAME INPUT':
+                    await element.sendKeys(uconfig.firstname); 
+                    break;
+                case 'FIRSTNAME INPUT':
+                    await element.sendKeys(uconfig.firstname); 
+                    break;
+                case 'LASTNAME INPUT':
+                    await element.sendKeys(uconfig.lastname); 
+                    break;
+                case 'COMPANY INPUT':
+                    await element.sendKeys(uconfig.company); 
+                    break;
+                case 'STREET INPUT':
+                    await element.sendKeys(uconfig.street); 
+                    break;
+                case 'ZIPCODE INPUT':
+                    await element.sendKeys(uconfig.zipcode); 
+                    break;
+                case 'PHONE INPUT':
+                    await element.sendKeys(uconfig.phone); 
+                    break;
+                case 'GENERIC SELECT INPUT':
+                    await element.click(); 
+                    await element.sendKeys(Key.ARROW_DOWN); 
+                    await element.click(); 
+                    break;
+                case 'COUNTRY SELECT INPUT':
+                    await element.sendKeys(uconfig.country); 
+                    break;
+                case 'STATE SELECT INPUT':
+                    await element.sendKeys(uconfig.state); 
+                    break;
+                case 'SUBMIT INPUT':
+                    submitButton = element; 
+                    break;
+                case 'GENERIC SUBMIT INPUT':
+                    genericSubmitButton = element; 
+                    break;
+                    
+            }
         
+            /*
             if (inputType == 'EMAIL INPUT') {
                 if (await element.isDisplayed()) await element.sendKeys(uconfig.email); 
                 //element.isDisplayed().then(isDisplayed => { if (isDisplayed) element.sendKeys(uconfig.email); });
@@ -103,11 +156,18 @@ async function setElements(parsedPageElements) {
                 if (await element.isDisplayed()) submitButton = element; 
 
             } 
+            */
 
 
         }
     }
-    return submitButton;
+
+    // Return a submit button to submit the form
+    if (submitButton != undefined) {
+        return submitButton;
+    } else {
+        return genericSubmitButton;
+    }
 }
 
 // TODO: FIX 'element is not clickable at point... ' by arranging order of clicking/inputting
