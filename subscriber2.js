@@ -20,12 +20,20 @@ async function init() {
         
     
     let pagesToVisit = await googler.getGoogleResults(driver, By, Key, uconfig.search_term);
-    console.log(pagesToVisit.length);
+    let pagesToVisit2 = await googler.getGoogleResults(driver, By, Key, 'farm newsletters');
+    let pagesToVisit3 = await googler.getGoogleResults(driver, By, Key, 'tech news');
+    let pagesToVisit4 = await googler.getGoogleResults(driver, By, Key, 'world news');
 
-    // Visit each google result
-    for (let i = 0; i < pagesToVisit.length; i++) {
+    await visitWebsites(pagesToVisit);
+    await visitWebsites(pagesToVisit2);
+    await visitWebsites(pagesToVisit3);
+    await visitWebsites(pagesToVisit4);
+    
+}
 
-        await driver.get(pagesToVisit[i]);
+async function visitWebsites(websitesToVisit) {
+    for (let i = 0; i < websitesToVisit.length; i++) {
+        await driver.get(websitesToVisit[i]);
 
         let parsedPageElements = await parsePageElements();
     
@@ -44,7 +52,6 @@ async function init() {
             console.log(e);
         }
     }
-    
 }
 
 // Return a list of elements that take input and pass them through the element parser class

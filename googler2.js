@@ -12,6 +12,7 @@ module.exports.getGoogleResults = async function(driver, By, Key, searchTerm) {
     let resultPageElements = await driver.findElements(By.xpath('//*[@id="nav"]/tbody/tr/*/a'));
     for (let k = 0; k < resultPageElements.length; k++) resultPages.push(await resultPageElements[k].getAttribute('href'));
     
+    
     for (j = 0; j < resultPages.length; j++) {
 
         let searchResultElements = await driver.findElements(By.xpath('//*[@id="rso"]/div/div/*/div/div/*/a'));

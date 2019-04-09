@@ -8,5 +8,5 @@ module.exports = {
     city: "",
     zip: "",
     country: "USA",
-    search_term: "mortgage newsletter"
+    search_term: "loan newsletter"
 }
