@@ -1,11 +1,12 @@
 module.exports = {
     firstname: "Jarold",
     lastname: "Lemon",
-    email: "testinbox@verifymail.win",
+    email: "phfv0@email-host.info",
     phone: "16081231234",
     dob: "",
     street: "",
     city: "",
     zip: "",
-    country: "USA"
+    country: "USA",
+    search_term: "mortgage newsletter"
 }

@@ -19,7 +19,7 @@ async function init() {
         .build();
         
     
-    let pagesToVisit = await googler.getGoogleResults(driver, By, Key, 'Java Newsletter');
+    let pagesToVisit = await googler.getGoogleResults(driver, By, Key, uconfig.search_term);
     console.log(pagesToVisit.length);
 
     // Visit each google result
@@ -29,15 +29,20 @@ async function init() {
 
         let parsedPageElements = await parsePageElements();
     
-        let submitButton = await setElements(parsedPageElements);
-        console.log('done setting elements!');
-    
-        if (submitButton != undefined) {
-            submitButton.click();
+        try {
+            let submitButton = await setElements(parsedPageElements);
+            console.log('done setting elements!');
+
+            if (submitButton != undefined) {
+                driver.executeScript("arguements[0].scrollIntoView(false)", submitButton);
+                await driver.sleep(100);
+                await submitButton.click();
+                await driver.sleep(500);
+            }
+
+        } catch (e) {
+            console.log(e);
         }
-
-        await driver.sleep(1000);
-
     }
     
 }
