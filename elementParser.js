@@ -13,7 +13,9 @@ module.exports.parseElement = async function (e) {
     parsedElement.elementType = await e.getAttribute('type');
     parsedElement.elementHtmlTag = await e.getAttribute('tagName');
     parsedElement.elementName = await e.getAttribute('name');
+    parsedElement.elementTitle = await e.getAttribute('title');
     parsedElement.elementInnerText = await e.getText();
+    
     //parsedElement.parentElement = document.getElementById(this.elementId).parentElement.nodeName;
     //console.log(parsedElement.parentElement);
 
@@ -25,6 +27,7 @@ module.exports.parseElement = async function (e) {
     parsedElement.elementType = parsedElement.elementType != null ? parsedElement.elementType.toLowerCase() : '';
     parsedElement.elementHtmlTag = parsedElement.elementHtmlTag != null ? parsedElement.elementHtmlTag.toLowerCase() : '';
     parsedElement.elementName = parsedElement.elementName != null ? parsedElement.elementName.toLowerCase() : '';
+    parsedElement.elementTitle = parsedElement.elementTitle != null ? parsedElement.elementTitle.toLowerCase() : '';
     parsedElement.elementInnerText = parsedElement.elementInnerText != null ? parsedElement.elementInnerText.toLowerCase() : '';
 
     parsedElement.getType();
@@ -52,13 +55,23 @@ class ParsedElement {
         //let emailTexts = ['email','e-mail'];
         //let elementContainsWordEmail = emailTexts.some(txt => this.elementPlaceholder.includes(txt));
 
-        let elementTakesInput = this.elementHtmlTag == 'input' || this.elementHtmlTag == 'button' || this.elementHtmlTag == 'select';    
+        let elementTakesInput = this.elementHtmlTag == 'input' || this.elementHtmlTag == 'button' 
+            || this.elementHtmlTag == 'select' || this.elementHtmlTag == 'a';
 
         let elementAcceptsText = this.elementType == 'text' || this.elementType == 'email';
 
         let checkboxElement = this.elementType == 'checkbox';
 
         let selectElement = this.elementHtmlTag == 'select';
+
+        let radioElement = this.elementType == 'radio';
+
+        let passwordElement = this.elementType == 'password' || this.isGenericTypeOf('password');
+
+        let numberElement = this.elementType == 'number';    // Generic - anything that takes a number
+        let dayElement = numberElement && this.isGenericTypeOf('day');
+        let monthElement = numberElement && this.isGenericTypeOf('month');
+        let yearElement = numberElement && this.isGenericTypeOf('year');
 
         let emailElement = this.isGenericTypeOf('email');
         let nameElement = this.isGenericTypeOf('name');
@@ -71,8 +84,8 @@ class ParsedElement {
         let countryElement = selectElement && this.isGenericTypeOf('country');
         let stateElement = selectElement && this.isGenericTypeOf('state')
 
-        let submitButtonElement = (this.isGenericTypeOf('subscribe') || this.isGenericTypeOf('sign') || this.isGenericTypeOf('join'))  
-            && !this.elementOuterHtml.includes('unsubscribe');
+        let submitButtonElement = (this.isGenericTypeOf('subscribe') || this.isGenericTypeOf('sign') || this.isGenericTypeOf('join'))
+            && !this.elementOuterHtml.includes('unsubscribe')
 
         let genericSubmitButton = this.isGenericTypeOf('submit');
         
@@ -100,8 +113,20 @@ class ParsedElement {
                 this.typeOfElement = 'COUNTRY SELECT INPUT';
             } else if (stateElement) {
                 this.typeOfElement = 'STATE SELECT INPUT';
+            } else if (radioElement) {
+                this.typeOfElement = 'RADIO INPUT';
             } else if (selectElement && !countryElement && !stateElement) {
                 this.typeOfElement = 'GENERIC SELECT INPUT';
+            } else if (dayElement) {
+                this.typeOfElement = 'DAY NUMBER INPUT';
+            } else if (monthElement) {
+                this.typeOfElement = 'MONTH NUMBER INPUT';
+            } else if (yearElement) {
+                this.typeOfElement = 'YEAR NUMBER INPUT';
+            } else if (numberElement && !dayElement && !monthElement && !yearElement) {
+                this.typeOfElement = 'GENERIC NUMBER INPUT';
+            } else if (passwordElement) {
+                this.typeOfElement = 'PASSWORD INPUT';
             } else if (submitButtonElement) {
                 this.typeOfElement = 'SUBMIT INPUT';
             } else if (genericSubmitButton) {
@@ -114,7 +139,8 @@ class ParsedElement {
 
     // Returns true if: Placeholder, ElementId, ElementName include typeOf 
     isGenericTypeOf(typeOf) {
-        return this.elementPlaceholder.includes(typeOf) || this.elementId.includes(typeOf) || this.elementName.includes(typeOf) || this.elementValue.includes(typeOf);
+        return this.elementPlaceholder.includes(typeOf) || this.elementId.includes(typeOf) || this.elementName.includes(typeOf) || this.elementValue.includes(typeOf)
+            || this.elementTitle.includes(typeOf);
     }
 }
 

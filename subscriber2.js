@@ -1,17 +1,18 @@
 "use strict"; 
 require('chromedriver');
-const { Builder, By, Key, until } = require('selenium-webdriver');
+const { Builder, By, Key, until, Webdriver } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const uconfig = require('./userconfig.js');
 const elementParser = require('./elementParser.js');
 const googler = require('./googler2.js');
 var driver;
-
+let originalWindow; // Stores the ID of the original Chrome Window open - For differentiating between newly opened tabs
 
 
 init();
 // MAIN function
 async function init() {
+
     driver = await new Builder()
         .usingServer()
         .withCapabilities({'browserName': 'chrome' })
@@ -19,50 +20,94 @@ async function init() {
         .build();
         
     
-    //let pagesToVisit = await googler.getGoogleResults(driver, By, Key, uconfig.search_term);
-    //await visitWebsites(pagesToVisit);
-    await visitWebsites(['https://nielsensports.com/newsletter-subscription/']);
-
+    originalWindow = await driver.getWindowHandle();
+    let pagesToVisit = await googler.getGoogleResults(driver, By, Key, uconfig.search_term);
+    await visitWebsites(pagesToVisit);
+    
+    //await visitWebsites(['https://www.lowcards.com/?s=']);
+    //await visitWebsites(['http://solidarityrealty.com/the-home-buying-process/','https://www.trulia.com/guides/buyer/', 'https://www.lowcards.com/?s=', 'https://www.madcitydreamhomes.com/buying.php']);
 }
 
 async function visitWebsites(websitesToVisit) {
-    for (let i = 0; i < websitesToVisit.length; i++) {
-        await driver.get(websitesToVisit[i]);
-
-        let parsedPageElements = await parsePageElements();
     
+    for (let i = 0; i < websitesToVisit.length; i++) {
+
         try {
+            await driver.get(websitesToVisit[i]);
+            const original_window = await driver.getWindowHandle();
+
+            /*
+            // Try closing out of other existing tabs that may have opened
+            driver.getAllWindowHandles().then(function gotWindowHandles(allhandles) {
+                driver.close();
+                driver.switchTo().window(allhandles[allhandles.length - 1]);
+            });
+            */
+      
+
+            // Retrieve all applicable elements
+            let inputs = await driver.findElements(By.css('input'));
+            let buttons = await driver.findElements(By.css('button'));
+            let selects = await driver.findElements(By.css('select'));
+            let pageElementsRetrieved = [];
+            pageElementsRetrieved = pageElementsRetrieved.concat(inputs, buttons, selects);
+
+            // Run each element through the processor class
+            let parsedPageElements = await parsePageElements(pageElementsRetrieved);
+    
+            // Perform actions on elements as prescribed
             let submitButton = await setElements(parsedPageElements);
             console.log('done setting elements!');
 
             if (submitButton != undefined) {
-                driver.executeScript("arguments[0].scrollIntoView(false)", submitButton);
-                await driver.sleep(100);
+                //driver.executeScript("arguments[0].scrollIntoView(false)", submitButton);
                 await submitButton.click();
-                await driver.sleep(500);
-            } 
+
+            } else {
+                // No submit or generic submit found on page - fall back to any <a> elements. 
+                let aTagElements = await driver.findElements(By.xpath(aTagSubmitXPath));
+                let alternativeSubmitButton = await setElements(aTagElements);
+                if (alternativeSubmitButton != undefined) { 
+                    console.log('Retrieved an alternative submit button');
+                    driver.executeScript("arguments[0].scrollIntoView(false)", alternativeSubmitButton);
+                    await alternativeSubmitButton.click();
+                } else {
+                    console.log('No submit action found anywhere on page. ')
+                }
+            }
+
+            // Close out of any javascript popus. 
+            try {
+                driver.switchTo().alert().dismiss().catch(()=>{});
+            } catch (e2) {}
+
+            // Close out of any additional tabs/windows that were opened
+            let windows = await driver.getAllWindowHandles();
+            if (windows.length > 1) {
+                await driver.switchTo().window(windows[0]);
+                await driver.close();
+                await driver.switchTo().window(windows[1]);
+            }
+
         } catch (e) {
             console.log(e);
         }
-        
+        //await driver.sleep(2000);
     }
+    
 }
 
 // Return a list of elements that take input and pass them through the element parser class
-async function parsePageElements() {
+async function parsePageElements(elements) {
     let parsedElements = [];
-    let inputs = await driver.findElements(By.css('input'));
-    let buttons = await driver.findElements(By.css('button'));
-    let selects = await driver.findElements(By.css('select'));
 
-    let elements = [];
-    elements = elements.concat(inputs, buttons, selects);
-    console.log('Total elements found: ' + elements.length);
+    console.log('Total elements processing: ' + elements.length);
 
     for (var i = 0; i < elements.length; i++) {
         let parsedElement = await elementParser.parseElement(elements[i]);
         parsedElements.push(parsedElement);
 
+        /*
         // (TODO) Save the element's parent node to evaluate which form to process
         let parentNode = await driver.executeScript('return arguments[0].parentNode', elements[i]);
         let parentNodeName = await driver.executeScript('return arguments[0].nodeName', parentNode);
@@ -70,6 +115,7 @@ async function parsePageElements() {
             let parentNodeId = await driver.executeScript('return arguments[0].name', parentNode);
             let action = await driver.executeScript("return arguments[0].getAttribute('action')", parentNode);
         }
+        */
 
     }
     return parsedElements;
@@ -126,6 +172,24 @@ async function setElements(parsedPageElements) {
                 case 'STATE SELECT INPUT':
                     await element.sendKeys(uconfig.state); 
                     break;
+                case 'RADIO INPUT':
+                    await element.click();
+                    break;
+                case 'GENERIC NUMBER INPUT':
+                    element.sendKeys(uconfig.defaultnumber); 
+                    break;
+                case 'DAY NUMBER INPUT':
+                    element.sendKeys(uconfig.defaultday);
+                    break;
+                case 'MONTH NUMBER INPUT':
+                    element.sendKeys(uconfig.defaultmonth);
+                    break;
+                case 'YEAR NUMBER INPUT':
+                    element.sendKeys(uconfig.defaultyear);
+                    break;
+                case 'PASSWORD INPUT':
+                    await element.sendKeys(uconfig.password);
+                    break;
                 case 'SUBMIT INPUT':
                     submitButton = element; 
                     break;
@@ -174,6 +238,23 @@ async function setElements(parsedPageElements) {
 async function setNameFields() {
 
 }
+
+let aTagSubmitXPath = `//*[
+    @type='a' and 
+    (
+        (contains(translate(@value, 'SUBCRIE', 'subcrie'), 'subscribe')) 
+        or (contains(translate(@name, 'SUBCRIE', 'subcrie'), 'subscribe'))
+        or (contains(translate(text(), 'SUBCRIE', 'subcrie'), 'subscribe'))
+        or (contains(translate(text(), 'SIGN', 'sign'), 'sign'))
+        or (contains(translate(@id, 'SIGN', 'sign'), 'sign'))
+        or (contains(translate(@class, 'SIGN', 'sign'), 'sign'))
+        or (contains(translate(@value, 'SIGN', 'sign'), 'sign'))
+        or (contains(translate(@value, 'CONTINUE', 'continue'), 'continue')) 
+        or (contains(translate(@value, 'SEND', 'send'), 'send')) 
+        or (contains(translate(@value, 'SUBMIT', 'submit'), 'submit')) 
+    )
+]`;
+
 
 
 
